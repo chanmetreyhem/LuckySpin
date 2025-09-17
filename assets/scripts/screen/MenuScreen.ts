@@ -3,20 +3,15 @@ import {
   Component,
   director,
   easing,
-  find,
   Label,
-  log,
   Node,
   tween,
   Vec3,
   Button,
-  Game,
 } from "cc";
 import { LocalizationController } from "../controller/LocalizationController";
 import { GameController } from "../controller/GameController";
-import { UserPre } from "../utils/UserPre";
 import { User } from "../models/Model";
-import { SoundController } from "../controller/SoundController";
 const { ccclass, property } = _decorator;
 
 @ccclass("MenuScreen")
@@ -31,11 +26,8 @@ export class MenuScreen extends Component {
   @property({ type: Node }) wheelNode: Node = null;
   @property({ type: Label }) timeCountLabel: Label = null;
 
-  // dailyspin
-  private isSpin: boolean = false;
-  private revealSpinCounter = 2 * 60 * 1000;
-  public spinCounter: number = 0;
-  private lastSpin: number = null;
+
+
 
   protected start(): void {
     //loop animation at wheel on play now button
@@ -47,11 +39,6 @@ export class MenuScreen extends Component {
 
   setUp(user: User) {
     this.coinLabel.string = user.coin.toString();
-    this.lastSpin = user.lastSpin;
-    this.spinCounter = user.spinCounter;
-    this.canYouSpin();
-    this.updateCountdown();
-    this.schedule(this.updateCountdown, 1);
   }
 
   playNowClick() {
@@ -92,43 +79,23 @@ export class MenuScreen extends Component {
     director.loadScene("game");
   }
 
+
   leaveGame() {
     window["main"].flutter();
-   setTimeout(() => {
-     GameController.instance.updateMessage();
-   },1000)
+    setTimeout(() => {
+      GameController.instance.updateMessage();
+    }, 1000)
   }
 
-  canYouSpin() {
-    if (
-      !this.lastSpin ||
-      Date.now() - this.lastSpin >= this.revealSpinCounter
-    ) {
-      this.isSpin = true;
-      this.timeCountLabel.string = "";
-      this.spinCounter = 0;
-    } else {
-      this.isSpin = false;
-    }
 
-    this.playNowButton.interactable = this.isSpin;
-    this.badgeNode.active = this.isSpin;
-    this.updateCountdown();
+  inOrActiveSpinRevealScheduleUI(isRevealAvailable: boolean) {
+    this.playNowButton.interactable = isRevealAvailable;
+    this.badgeNode.active = isRevealAvailable;
+    this.timeCountLabel.node.active = !isRevealAvailable;
+
   }
 
-  updateCountdown() {
-    if (!this.lastSpin) return;
-    const timeLeft = this.revealSpinCounter - (Date.now() - this.lastSpin);
-    if (timeLeft <= 0) {
-      this.playNowButton.interactable = true;
-      this.timeCountLabel.string = "";
-      this.spinCounter = 0;
-      this.badgeNode.active = true;
-    } else {
-      const hours = Math.floor(timeLeft / (1000 * 60 * 60));
-      const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
-      this.timeCountLabel.string = `${hours}h ${minutes}m ${seconds}s`;
-    }
+  setTimeLabelText(text: string) {
+    this.timeCountLabel.string = text;
   }
 }

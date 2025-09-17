@@ -22,7 +22,7 @@ const { ccclass, property } = _decorator;
 export class PopUpScreen extends Component {
   @property({ type: Sprite }) winSprite: Sprite;
   @property({ type: Label }) titleLabel: Label;
-  @property({ type: Label }) subtitleLabel: Label;            
+  @property({ type: Label }) subtitleLabel: Label;
   @property({ type: Label }) exitButtonLabel: Label;
   @property({ type: Label }) againButtonLabel: Label;
   start() { }
@@ -37,10 +37,16 @@ export class PopUpScreen extends Component {
     SoundController.instance.win();
     this.setUp();
     this.showAnimation();
-    resources.load("prizes/" + prize.spriteFrame, SpriteFrame, (error, data) => {
-      if (error) console.log("error : " + error); return;
+
+    resources.load("prizes/" + prize.spriteFrame + "/spriteFrame", SpriteFrame, (error, data) => {
+      if (error) {
+        console.log("error : " + error.message);
+        return;
+      }
       this.winSprite.spriteFrame = data;
+
     });
+    
     this.titleLabel.string =
       prize.title?.[LocalizationController.instance.lang];
     this.subtitleLabel.string =

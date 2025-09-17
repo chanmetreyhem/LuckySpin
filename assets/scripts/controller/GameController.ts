@@ -24,10 +24,11 @@ import {
   Vec3,
 } from "cc";
 import { UIController } from "./UIController";
-import { Prize, User, Lang } from "../models/Model";
+import { Prize, User } from "../models/Model";
 import { LocalizationController } from "./LocalizationController";
 import { UserPre } from "../utils/UserPre";
 import { SoundController } from "./SoundController";
+import { DailySpinController } from './DailySpinController';
 
 const { ccclass, property } = _decorator;
 
@@ -46,6 +47,7 @@ enum GamMode {
 
 @ccclass("GameController")
 export class GameController extends Component {
+
   //singleton
   private static _instance: GameController;
 
@@ -53,9 +55,13 @@ export class GameController extends Component {
     return GameController._instance;
   }
 
-  @property({ type: [Prize] }) prizes: Prize[] = [];
+
 
   @property({ type: UIController }) uiController: UIController = null;
+
+
+  @property({ type: [Prize] }) prizes: Prize[] = [];
+
 
   @property({ type: Node }) wheel: Node = null;
   @property({ type: Sprite }) resultPrizeSprite: Sprite = null;
@@ -64,10 +70,13 @@ export class GameController extends Component {
   @property({ type: Prefab }) particlePre: Prefab = null;
   @property({ type: Node }) spinButton: Node = null;
   @property({ type: Node }) resultSpriteNode: Node = null;
-
   @property({ type: Label }) clickButtonInfo: Label = null;
   @property({ type: Label }) coinLabel: Label = null;
+  @property({ type: Label }) messageLabel: Label;
 
+  @property({ type: ProgressBar }) progressBar: ProgressBar = null;
+  @property({ type: Node }) dailyControllerNode: Node = null;
+  private dailySpinController: DailySpinController = null;
   public userData: User;
 
   private mode: Mode = Mode.dev;
@@ -78,23 +87,14 @@ export class GameController extends Component {
   private localSpinCount: number = 0;
   private isCanSpin: boolean = true;
 
-  private checkSpin(): boolean {
-    if (this.gameMode == GamMode.PLAY_WITH_COIN) {
-      return this.localSpinCount < 2;
-    } else {
-      return true;
-    }
-  }
-
-  @property({ type: Label }) messageLabel: Label;
-
-  @property({ type: ProgressBar }) progressBar: ProgressBar = null;
 
   updateProgressBar() {
     this.progressBar.progress = this.localCoin / this.maxCoin;
   }
 
   protected onLoad(): void {
+    GameController._instance = this;
+    this.dailySpinController = this.dailyControllerNode.getComponent(DailySpinController);
     const jsonString = `
     {"id":"1234","name":"gumiho","coin":90,"spinCounter":1,"lastSpin":23311333,"historyPrizes":[{"spriteFrame":null,"id":"234","amount":12,"title":{"en":"end","kh":"jdfjdf"},"subTitle":{"en":"dfjdf","kh":"dfhf"}},{"spriteFrame":null,"id":"234","amount":12,"title":{"en":"end","kh":"jdfjdf"},"subTitle":{"en":"dfjdf","kh":"dfhf"}}]}
     `;
@@ -108,7 +108,7 @@ export class GameController extends Component {
 
     this.loadUserData();
 
-    GameController._instance = this;
+
   }
 
   updateMessage() {
@@ -124,29 +124,30 @@ export class GameController extends Component {
     });
   }
 
-  public fromFlutter(data: string) {
-    console.log(data);
-    //log("recieved from flutter");
-    this.messageLabel.string = data;
-  }
 
   private loadUserData() {
+    this.uiController.showAndHideLoadingScreen(true);
     let user = UserPre.getUserData();
     if (user != null) {
       this.userData = user;
     } else {
-      this.userData = new User("123", "chanmetrey", 400, 0, null, []);
+      this.userData = new User("123", "GUMIHO", 400, 0, null, []);
       UserPre.saveUserData(this.userData);
     }
 
+    this.dailySpinController.setUp(this.userData);
+
     this.uiController.menuScreen.setUp(this.userData);
     this.localCoin = this.userData.coin;
-    this.localSpinCount = this.uiController.menuScreen.spinCounter;
+
 
     this.updateProgressBar();
     this.coinLabel.string = this.userData.coin.toString();
+    setTimeout(() => this.uiController.showAndHideLoadingScreen(false), 5000)
 
-    error(this.userData.toJson());
+
+
+    //error(this.userData.toJson());
   }
 
   callBack(data: any) {
@@ -159,7 +160,7 @@ export class GameController extends Component {
 
   spin() {
     // get spin counter
-
+    this.localSpinCount = this.userData.spinCounter;
     log("spin-counter : " + this.localSpinCount);
 
     //reset spin wheel angel
@@ -195,15 +196,6 @@ export class GameController extends Component {
     //     angle
     // );
 
-    // this.schedule(
-    //   () => {
-    //     SoundController.instance.spin();
-
-    //   },
-    //   (duration * 22.5) / 360,
-    //   Math.floor(angle / (360 / 16)) - 5,
-    //   0
-    // );
 
     tween(this.spinWheelNode)
       .to(
@@ -240,11 +232,13 @@ export class GameController extends Component {
     this.updateProgressBar();
 
     this.userData.setCoin(this.localCoin);
+
+    this.userData.setSpinCount(this.localSpinCount);
     this.userData.setLastSpin();
     //this.userData.historyPrizes.push(winPrize);
 
     // reveal setup on menu screen
-    this.uiController.menuScreen.setUp(this.userData);
+
 
     // save user data
     UserPre.saveUserData(this.userData);
@@ -269,8 +263,7 @@ export class GameController extends Component {
         .to(0.1, { scale: Vec3.ONE }, { easing: easing.smooth })
         .start();
 
-      // enable back button
-      // this.uiController.gameScreen.backButton.interactable = true;
+
 
       this.uiController.popUpScreen.show(winPrize);
     }, 4000);
@@ -278,11 +271,15 @@ export class GameController extends Component {
 
   exit() {
     this.uiController.menuScreen.show();
+    this.updateMenuScreen();
   }
 
   playAgain() {
+    log("local counter : " + this.localSpinCount)
     if (this.localCoin > 10 && this.localSpinCount < 2) {
+
       LocalizationController.instance.setupIdleLabelString();
+
       this.localCoin -= 15;
       this.userData.setCoin(this.localCoin);
       this.userData.setLastSpin();
@@ -301,7 +298,7 @@ export class GameController extends Component {
     let particlePre = instantiate(this.particlePre);
     particlePre.setParent(find("Canvas"));
 
-    resources.load("prizes/" + name, SpriteFrame, (error, data) => {
+    resources.load("prizes/" + name + "/spriteFrame", SpriteFrame, (error, data) => {
       if (error) {
         console.log("error : " + error);
         return;
@@ -313,6 +310,13 @@ export class GameController extends Component {
 
     this.scheduleOnce(() => {
       console.log("destroy");
+      particlePre.destroy();
     }, 2);
+  }
+
+
+  updateMenuScreen() {
+    this.uiController.menuScreen.setUp(this.userData);
+    this.dailySpinController.setUp(this.userData);
   }
 }
