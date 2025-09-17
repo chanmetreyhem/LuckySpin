@@ -1,0 +1,40 @@
+{
+  "spin": {
+    "en": "spin",
+    "kh": "បង្វិល"
+  },
+
+  "play": {
+    "en": "play",
+    "kh": "លេង"
+  },
+  "win": {
+    "en": "you win!",
+    "kh": "អ្នកឈ្នះ!"
+  },
+  "back": {
+    "en": "Back",
+    "kh": "ត្រលប់"
+  },
+  "clickTheButtonForSpin": {
+    "en": "click the button for spin.",
+    "kh": "សូមចុចប៊ូតុងដើម្បីបង្វិល"
+  },
+
+  "try-your-luck": {
+    "en": "Try your luck",
+    "kh": "បង្វិលដើម្បី​ផ្សងសំណាង"
+  },
+  "play-now": {
+    "en": "Play Now",
+    "kh": "បង្វិលឥឡូវ"
+  },
+  "exit": {
+    "en": "Exit",
+    "kh": "ចាកចេញ"
+  },
+  "again": {
+    "en": "Again",
+    "kh": "ម្តងទៀត"
+  }
+}
