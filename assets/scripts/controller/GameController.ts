@@ -22,22 +22,24 @@ import {
   sys,
   tween,
   Vec3,
+  Enum,
 } from "cc";
+
 import { UIController } from "./UIController";
 import { Prize, User } from "../models/Model";
 import { LocalizationController } from "./LocalizationController";
 import { UserPre } from "../utils/UserPre";
 import { SoundController } from "./SoundController";
-import { DailySpinController } from './DailySpinController';
+import { DailySpinController } from "./DailySpinController";
 
 const { ccclass, property } = _decorator;
 
-enum Mode {
+export enum Mode {
   dev,
   release,
 }
 
-enum GamMode {
+export enum GamMode {
   PLAY_WITH_COIN,
   PLAY_WITH_GIFT,
   PLAY_WITH_HEART,
@@ -47,7 +49,6 @@ enum GamMode {
 
 @ccclass("GameController")
 export class GameController extends Component {
-
   //singleton
   private static _instance: GameController;
 
@@ -55,38 +56,25 @@ export class GameController extends Component {
     return GameController._instance;
   }
 
-
-
   @property({ type: UIController }) uiController: UIController = null;
-
 
   @property({ type: [Prize] }) prizes: Prize[] = [];
 
 
-  @property({ type: Node }) wheel: Node = null;
-  @property({ type: Sprite }) resultPrizeSprite: Sprite = null;
-  @property({ type: Node }) spinWheelNode;
-  @property({ type: [SpriteFrame] }) prizeSpriteFrams: SpriteFrame[] = [];
-  @property({ type: Prefab }) particlePre: Prefab = null;
-  @property({ type: Node }) spinButton: Node = null;
-  @property({ type: Node }) resultSpriteNode: Node = null;
-  @property({ type: Label }) clickButtonInfo: Label = null;
-  @property({ type: Label }) coinLabel: Label = null;
-  @property({ type: Label }) messageLabel: Label;
 
   @property({ type: ProgressBar }) progressBar: ProgressBar = null;
   @property({ type: Node }) dailyControllerNode: Node = null;
   private dailySpinController: DailySpinController = null;
   public userData: User;
 
-  private mode: Mode = Mode.dev;
-  private gameMode: GamMode = GamMode.PLAY_WITH_COIN;
+  @property({ type: Enum(Mode) }) mode: Mode = Mode.release;
+  @property({ type: Enum(GamMode) }) gameMode: GamMode = GamMode.PLAY_WITH_COIN;
+  
   public localCoin: number = 0;
   private minCoin: number = 0;
   private maxCoin: number = 10000;
   private localSpinCount: number = 0;
   private isCanSpin: boolean = true;
-
 
   updateProgressBar() {
     this.progressBar.progress = this.localCoin / this.maxCoin;
@@ -94,7 +82,8 @@ export class GameController extends Component {
 
   protected onLoad(): void {
     GameController._instance = this;
-    this.dailySpinController = this.dailyControllerNode.getComponent(DailySpinController);
+    this.dailySpinController =
+      this.dailyControllerNode.getComponent(DailySpinController);
     const jsonString = `
     {"id":"1234","name":"gumiho","coin":90,"spinCounter":1,"lastSpin":23311333,"historyPrizes":[{"spriteFrame":null,"id":"234","amount":12,"title":{"en":"end","kh":"jdfjdf"},"subTitle":{"en":"dfjdf","kh":"dfhf"}},{"spriteFrame":null,"id":"234","amount":12,"title":{"en":"end","kh":"jdfjdf"},"subTitle":{"en":"dfjdf","kh":"dfhf"}}]}
     `;
@@ -104,26 +93,21 @@ export class GameController extends Component {
     // ]
     // const testUser = new User("1234", "gumiho", 90, 1, 23311333, testPrizes);
     const testUser = User.fromJson(jsonString);
-    console.log("testUser : " + testUser.historyPrizes[0].subTitle);
+    console.log("testUser : " + testUser.historyPrizes[0].subTitle.en);
 
     this.loadUserData();
-
-
-  }
-
-  updateMessage() {
-    this.messageLabel.string = JSON.stringify(window["main"].data);
   }
 
   protected start() {
-    let prizes = this.wheel.getComponentsInChildren(Sprite);
-    prizes.forEach((s, i) => {
-      if (i != 0) {
-        if (i < 13) this.prizes[i - 1].spriteFrame = s.spriteFrame.name;
-      }
-    });
-  }
 
+    // prizes.forEach((s, i) => {
+    //   if (i != 0) {
+    //     this.prizes[i - 1].spriteFrame = s.spriteFrame.name;
+    //   }
+    // });
+
+
+  }
 
   private loadUserData() {
     this.uiController.showAndHideLoadingScreen(true);
@@ -135,17 +119,16 @@ export class GameController extends Component {
       UserPre.saveUserData(this.userData);
     }
 
+    log("user data : " + this.userData.toJson());
+
     this.dailySpinController.setUp(this.userData);
 
     this.uiController.menuScreen.setUp(this.userData);
     this.localCoin = this.userData.coin;
 
-
     this.updateProgressBar();
-    this.coinLabel.string = this.userData.coin.toString();
-    setTimeout(() => this.uiController.showAndHideLoadingScreen(false), 5000)
-
-
+    this.uiController.gameScreen.setCoinLabel(this.userData.coin.toString());
+    setTimeout(() => this.uiController.showAndHideLoadingScreen(false), 1000);
 
     //error(this.userData.toJson());
   }
@@ -163,23 +146,16 @@ export class GameController extends Component {
     this.localSpinCount = this.userData.spinCounter;
     log("spin-counter : " + this.localSpinCount);
 
-    //reset spin wheel angel
-    this.spinWheelNode.angle = 0;
 
     this.localSpinCount += 1;
-
-    this.clickButtonInfo.string = "";
 
     // disable back button
     this.uiController.gameScreen.backButton.interactable = false;
 
-    //spin button off
-    tween(this.spinButton)
-      .to(0.1, { scale: Vec3.ZERO }, { easing: easing.smooth })
-      .start();
-
-    let round = randomRangeInt(4, 6);
     const randomIndex = randomRangeInt(0, this.prizes.length);
+    const winPrize = this.prizes[randomIndex];
+    let round = randomRangeInt(4, 6);
+
     let duration = randomRange(1, 4);
     let angle = 360 * round + (360 / 16) * randomIndex + 360 / 32;
 
@@ -196,77 +172,38 @@ export class GameController extends Component {
     //     angle
     // );
 
-
-    tween(this.spinWheelNode)
-      .to(
-        duration * round,
-        {
-          angle: angle,
-        },
-        { easing: easing.quartOut } // quartInOut
-      )
-      .call(() => {
-        this.resultShow(randomIndex);
-      })
-      .start();
+    this.uiController.gameScreen.spinWheel(
+      duration,
+      round,
+      angle,
+      () => this.resultShow(winPrize)
+    );
   }
 
-  private resultShow(index: number) {
-    SoundController.instance.win();
-    tween(this.resultSpriteNode)
-      .to(
-        0.5,
-        { scale: new Vec3(3, 3, 3) },
-        {
-          easing: easing.sineIn,
-        }
-      )
-      .start();
+  private async resultShow(prize: Prize): Promise<void> {
+    // update user data
+    this.localCoin = this.localCoin + prize.amount;
 
-    const winPrize = this.prizes[index];
-    this.clickButtonInfo.string =
-      this.prizes[index].subTitle?.[LocalizationController.instance.lang];
+    this.updateUserData(prize);
 
-    this.localCoin = this.localCoin + winPrize.amount;
-    this.coinLabel.string = this.localCoin.toString();
+    // show result sprite popup
+
+    await this.uiController.gameScreen.resultSpritePopUp(prize);
+
+    this.uiController.popUpScreen.show(prize);
+  }
+
+  updateUserData(prize?: Prize) {
+    // update label coin at game screen;
+    this.uiController.gameScreen.setCoinLabel(this.localCoin.toString());
     this.updateProgressBar();
-
     this.userData.setCoin(this.localCoin);
-
     this.userData.setSpinCount(this.localSpinCount);
     this.userData.setLastSpin();
-    //this.userData.historyPrizes.push(winPrize);
-
-    // reveal setup on menu screen
-
+    // if (prize) this.userData.historyPrizes.push(prize);
 
     // save user data
     UserPre.saveUserData(this.userData);
-
-    let resultSpriteFrame = winPrize.spriteFrame;
-
-    this.cloneParticleEffect(resultSpriteFrame);
-
-    setTimeout(() => {
-      tween(this.resultSpriteNode)
-        .to(
-          0.5,
-          { scale: Vec3.ZERO },
-          {
-            easing: easing.sineIn,
-          }
-        )
-        .start();
-
-      // show spin button
-      tween(this.spinButton)
-        .to(0.1, { scale: Vec3.ONE }, { easing: easing.smooth })
-        .start();
-
-
-
-      this.uiController.popUpScreen.show(winPrize);
-    }, 4000);
   }
 
   exit() {
@@ -275,45 +212,17 @@ export class GameController extends Component {
   }
 
   playAgain() {
-    log("local counter : " + this.localSpinCount)
+    log("local counter : " + this.localSpinCount);
     if (this.localCoin > 10 && this.localSpinCount < 2) {
-
       LocalizationController.instance.setupIdleLabelString();
 
       this.localCoin -= 15;
-      this.userData.setCoin(this.localCoin);
-      this.userData.setLastSpin();
-      this.userData.setSpinCount(this.localSpinCount);
-
-      this.coinLabel.string = this.localCoin.toString();
-
-      UserPre.saveUserData(this.userData);
+      this.updateUserData();
 
       this.uiController.gameScreen.backButton.interactable = true;
       this.uiController.popUpScreen.hide();
     }
   }
-
-  cloneParticleEffect(name: string) {
-    let particlePre = instantiate(this.particlePre);
-    particlePre.setParent(find("Canvas"));
-
-    resources.load("prizes/" + name + "/spriteFrame", SpriteFrame, (error, data) => {
-      if (error) {
-        console.log("error : " + error);
-        return;
-      }
-
-      particlePre.getComponent(ParticleSystem2D).spriteFrame = data;
-      this.resultPrizeSprite.spriteFrame = data;
-    });
-
-    this.scheduleOnce(() => {
-      console.log("destroy");
-      particlePre.destroy();
-    }, 2);
-  }
-
 
   updateMenuScreen() {
     this.uiController.menuScreen.setUp(this.userData);

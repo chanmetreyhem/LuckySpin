@@ -36,7 +36,7 @@ export class User {
 
   static fromJson(d: any): User {
     const data = JSON.parse(d);
-    error("data : " + data.id);
+    // error("data : " + data.id);
     return new User(
       data["id"] || "",
       data["name"] || "",

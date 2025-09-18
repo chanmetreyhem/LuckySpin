@@ -1,4 +1,4 @@
-import { _decorator, Component, error, Node } from "cc";
+import { _decorator, Component, error, Node, resources, SpriteFrame } from "cc";
 import { User } from "../models/Model";
 const { ccclass } = _decorator;
 
@@ -22,4 +22,6 @@ export class UserPre extends Component {
     let fromLocal = localStorage.getItem(typeof User);
     return fromLocal != null ? User.fromJson(fromLocal) : null;
   }
+
+
 }

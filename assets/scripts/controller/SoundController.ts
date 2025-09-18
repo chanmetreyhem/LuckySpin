@@ -1,3 +1,5 @@
+//#region Import
+
 import {
   _decorator,
   AudioClip,
@@ -10,6 +12,8 @@ import {
 } from "cc";
 import { UserPre } from "../utils/UserPre";
 const { ccclass, property } = _decorator;
+
+//#endregion
 
 @ccclass("SoundController")
 export class SoundController extends Component {

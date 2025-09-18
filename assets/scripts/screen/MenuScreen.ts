@@ -10,7 +10,6 @@ import {
   Button,
 } from "cc";
 import { LocalizationController } from "../controller/LocalizationController";
-import { GameController } from "../controller/GameController";
 import { User } from "../models/Model";
 const { ccclass, property } = _decorator;
 
@@ -83,7 +82,7 @@ export class MenuScreen extends Component {
   leaveGame() {
     window["main"].flutter();
     setTimeout(() => {
-      GameController.instance.updateMessage();
+      //GameController.instance.updateMessage();
     }, 1000)
   }
 
